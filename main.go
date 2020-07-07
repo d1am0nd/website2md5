@@ -1,16 +1,16 @@
 package main
 
 import (
-	"os"
-	"log"
-	"io/ioutil"
-	"strings"
-	"encoding/hex"
-	"crypto/md5"
-	"net/http"
-	"path/filepath"
-	"fmt"
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -70,11 +70,10 @@ func main() {
 
 	output = filepath.Join(currDir, output)
 
-	fmt.Println(fileOutput)
-	fmt.Println(output)
-
 	err = ioutil.WriteFile(output, []byte(fileOutput), 0644)
 	handleErr(err)
+
+	fmt.Println("Done, wrote to: " + output)
 }
 
 func handleErr(err error) {
