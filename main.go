@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"time"
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
@@ -11,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func main() {
@@ -47,6 +47,8 @@ func main() {
 	outputMap := map[int]string{}
 
 	lineCount := 0
+	start := time.Now()
+
 	for scanner.Scan() {
 		res, err := http.Get(scanner.Text())
 		handleErr(err)
@@ -71,6 +73,8 @@ func main() {
 
 		lineCount++
 	}
+
+	fmt.Println("Elapsed:", time.Since(start))
 
 	output := filepath.Join(currDir, *outputFile)
 
