@@ -19,7 +19,7 @@ func main() {
 	inputFile := flag.String("input", "", "Input file")
 	outputFile := flag.String("output", "", "Output file")
 	printResponses := flag.Bool("print", false, "Whether to print responses. Default: no")
-	// concurrent := flag.Int("concurrent", 1, "Concurrent requests. Default: 1")
+	concurrent := flag.Int("concurrent", 1, "Concurrent requests. Default: 1")
 
 	flag.Parse()
 
@@ -45,12 +45,11 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	handleErr(err)
 
-	// outputMap := map[int]string{}
-
 	lineCount := 0
 	start := time.Now()
 
 	var wg sync.WaitGroup 
+	sem := make(chan struct{}, *concurrent)
 
 	lines := map[int](chan string){}
 
@@ -60,7 +59,8 @@ func main() {
 		lines[lineCount] = make(chan string)
 
 		wg.Add(1)
-		go fetch(&wg, lineCount, url, *printResponses, lines[lineCount])
+
+		go fetch(&wg, lineCount, url, *printResponses, lines[lineCount], sem)
 
 		lineCount++
 	}
@@ -82,8 +82,9 @@ func main() {
 	fmt.Println("Done, wrote to: " + outputFp)
 }
 
-func fetch(wg *sync.WaitGroup, count int, url string, printResponses bool, ch chan string) {
+func fetch(wg *sync.WaitGroup, count int, url string, printResponses bool, ch chan string, sem chan struct{}) {
 	defer wg.Done()
+	sem <- struct{}{}
 
 	res, err := http.Get(url)
 	handleErr(err)
@@ -106,6 +107,7 @@ func fetch(wg *sync.WaitGroup, count int, url string, printResponses bool, ch ch
 	response := url + ": " + hash
 	fmt.Println(response)
 
+	<- sem
 	ch <- response
 }
 
