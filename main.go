@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"time"
-	"sync"
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
@@ -31,7 +30,6 @@ func main() {
 		log.Fatal("Please provide output file using -output flag")
 	}
 
-	// reader := bufio.NewReader(os.Stdin)
 	currDir, err := os.Getwd()
 	
 	inputFp := filepath.Join(currDir, *inputFile)
@@ -48,9 +46,7 @@ func main() {
 	lineCount := 0
 	start := time.Now()
 
-	var wg sync.WaitGroup 
 	sem := make(chan struct{}, *concurrent)
-
 	lines := map[int](chan string){}
 
 	for scanner.Scan() {
@@ -58,9 +54,8 @@ func main() {
 
 		lines[lineCount] = make(chan string)
 
-		wg.Add(1)
-
-		go fetch(&wg, lineCount, url, *printResponses, lines[lineCount], sem)
+		sem <- struct{}{}
+		go fetch(lineCount, url, *printResponses, lines[lineCount], sem)
 
 		lineCount++
 	}
@@ -69,8 +64,6 @@ func main() {
 	for i := 0; i < lineCount; i++ {
 		output += <- lines[i] + "\n"
 	}
-
-	wg.Wait()
 
 	fmt.Println("Elapsed:", time.Since(start))
 
@@ -82,10 +75,7 @@ func main() {
 	fmt.Println("Done, wrote to: " + outputFp)
 }
 
-func fetch(wg *sync.WaitGroup, count int, url string, printResponses bool, ch chan string, sem chan struct{}) {
-	defer wg.Done()
-	sem <- struct{}{}
-
+func fetch(count int, url string, printResponses bool, ch chan<- string, sem <-chan struct{}) {
 	res, err := http.Get(url)
 	handleErr(err)
 	defer res.Body.Close()
