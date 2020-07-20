@@ -1,17 +1,17 @@
 package main
 
 import (
-	"flag"
-	"time"
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	}
 
 	currDir, err := os.Getwd()
-	
+
 	inputFp := filepath.Join(currDir, *inputFile)
 
 	fmt.Println("Reading from", inputFp)
@@ -47,22 +47,21 @@ func main() {
 	start := time.Now()
 
 	sem := make(chan struct{}, *concurrent)
-	lines := map[int](chan string){}
+	lines := []chan string{}
 
 	for scanner.Scan() {
 		url := scanner.Text()
 
-		lines[lineCount] = make(chan string)
-
+		lines = append(lines, make(chan string))
 		sem <- struct{}{}
-		go fetch(lineCount, url, *printResponses, lines[lineCount], sem)
+		go fetch(url, *printResponses, lines[lineCount], sem)
 
 		lineCount++
 	}
 
 	output := ""
 	for i := 0; i < lineCount; i++ {
-		output += <- lines[i] + "\n"
+		output += <-lines[i] + "\n"
 	}
 
 	fmt.Println("Elapsed:", time.Since(start))
@@ -75,7 +74,7 @@ func main() {
 	fmt.Println("Done, wrote to: " + outputFp)
 }
 
-func fetch(count int, url string, printResponses bool, ch chan<- string, sem <-chan struct{}) {
+func fetch(url string, printResponses bool, ch chan string, sem <-chan struct{}) {
 	res, err := http.Get(url)
 	handleErr(err)
 	defer res.Body.Close()
@@ -97,8 +96,8 @@ func fetch(count int, url string, printResponses bool, ch chan<- string, sem <-c
 	response := url + ": " + hash
 	fmt.Println(response)
 
-	<- sem
 	ch <- response
+	<-sem
 }
 
 func handleErr(err error) {
